@@ -2490,7 +2490,8 @@ else if (view === 'weekly') {
     const totalWeeks = Math.ceil(currentPeriodEntries.length / 7);
     for (let w = 0; w < totalWeeks; w++) {
         const wData = currentPeriodEntries.slice(w * 7, (w + 1) * 7);
-        allWeeks.push({ entries: wData, wNum: w + 1, pNum: currentPeriodNum });
+        // FIX: Added 'total' property here so High/Low can read it
+        allWeeks.push({ entries: wData, wNum: w + 1, pNum: currentPeriodNum, total: wData.reduce((s, d) => s + (d.total || 0), 0) });
     }
     allWeeks.reverse();
 
@@ -2525,7 +2526,7 @@ else if (view === 'weekly') {
      html += `
     <div class="fiscal-header" style="display:flex; justify-content:space-between; align-items: baseline; margin-bottom: 10px;">
         <span style="font-size:12px;">4-Week</span>
-  <span style="font-size:10px; color:#666; font-weight:normal; text-align: cetner;">${startDate} – ${endDate}</span>
+  <span style="font-size:10px; color:#666; font-weight:normal; text-align: center;">${startDate} – ${endDate}</span>
         <span style="color:var(--main-color); font-weight:bold;">Week ${weekNum}/4</span>
     </div>`;
 
@@ -2645,84 +2646,173 @@ else if (view === 'weekly') {
         </span>
     </div>`;
 }
-
     else if (view === 'periods') {
-                let periodTotals = [];
-        for (let i = ledger.length; i > 0; i -= 28) {
-            const pData = ledger.slice(Math.max(0, i - 28), i);
-            const pNum = Math.ceil(i / 28);
-const weeks = [];
-            const totalPWeeks = Math.ceil(pData.length / 7);
-            for (let w = 0; w < totalPWeeks; w++) {
-                const wData = pData.slice(w * 7, (w + 1) * 7);
-                weeks.push({ entries: wData, wInP: w + 1, total: wData.reduce((sum, d) => sum + d.total, 0) });
-            }
-            weeks.reverse();
-            periodTotals.push({ total: pData.reduce((sum, d) => sum + d.total, 0), pNum, days: pData.length, weeks });
-        }
-        periodTotals.forEach((p, idx) => {
-            const pKey = `ledger-p${p.pNum}`;
-            const priorP = periodTotals[idx + 1];
-            const isPeriodOpen = state.historySectionsOpen.has(pKey);
-            const allPeriodDiffs = [];
-          let pVarHtml = "";
-            if (priorP && priorP.days === 28) {
-                const isFullPeriod = p.days === 28;
-                const diff = isFullPeriod ? p.total - priorP.total : (p.total / p.days) - (priorP.total / 28);
-                const vClass = diff > 0.00000001 ? "variance-up" : (diff < -0.00000001 ? "variance-down" : "variance-neutral");
-                const pVarLabel = isFullPeriod ? `${formatLedger(Math.abs(diff), pKey+'-v')} ℏ` : `${formatLedger(Math.abs(diff), pKey+'-v')} ℏ/day`;
-                pVarHtml = `<span class="${vClass}" style="font-size:10px; margin-left:6px;">(${diff > 0 ? '+' : ''}${pVarLabel})</span>`;
-            }
-            html += `
-                <div class="help-section ${isPeriodOpen ? 'active' : ''}" style="margin-bottom:8px;">
-                    <div class="help-header" onclick="toggleHistorySection('${pKey}')" style="padding:10px 0;">
-                        <span style="font-size:11px; font-weight:bold; color:#fff;">PERIOD ${p.pNum} <span style="font-size:8px; color:#666;">(${p.days} Days)</span></span>
-                        <span style="font-size:13px; color:#fff; cursor:pointer; margin-right:10px;" onclick="event.stopPropagation(); toggleExact('${pKey}')">+${formatLedger(p.total, pKey)} ℏ ${pVarHtml}</span>
-                        <span style="color:#666; margin-right:10px; font-size:10px;">${isPeriodOpen ? '▲' : '▼'}</span>
-                    </div>
-                    <div class="help-content" style="border-top:1px solid #222;">`;
-            p.weeks.forEach((w, wIdx) => {
-                const wKey = `p${p.pNum}-w${w.wInP}`;
-                const isWeekOpen = state.historySectionsOpen.has(wKey);
-                const prevW = p.weeks[wIdx + 1];
-                let weekVarHtml = "";
-                if (prevW && prevW.entries.length === 7 && w.entries.length === 7) {
-                    const wDiff = w.total - prevW.total;
-                    const wVClass = wDiff > 0.00000001 ? "variance-up" : (wDiff < -0.00000001 ? "variance-down" : "variance-neutral");
-                    weekVarHtml = `<span class="${wVClass}" style="font-size:10px; margin-left:6px;">(${wDiff > 0 ? '+' : ''}${formatLedger(wDiff, wKey+'-v')})</span>`;
-                }
-                html += `
-                    <div style="margin:4px 0; border-bottom:1px solid #1a1a1a;">
-                        <div class="help-header" onclick="toggleHistorySection('${wKey}')" style="padding:8px 0; padding-left:10px;">
-                            <span style="font-size:10px; color:#aaa;">WEEK ${w.wInP}</span>
-                            <span style="font-size:11px; color:#fff; cursor:pointer; margin-right:10px;" onclick="event.stopPropagation(); toggleExact('${wKey}')">+${formatLedger(w.total, wKey)} ${weekVarHtml}</span>
-                            <span style="color:#666; margin-right:10px; font-size:10px;">${isWeekOpen ? '▲' : '▼'}</span>
-                        </div>
-                        <div style="display:${isWeekOpen ? 'block' : 'none'}; border-top:1px solid #1a1a1a;">`;
-                const sortedDays = [...w.entries].reverse();
-                const prevPWeek = p.weeks[wIdx + 1];
-                const prevPWeekSortedDays = prevPWeek ? [...prevPWeek.entries].reverse() : [];
-                const periodWeekDiffs = [];
-                sortedDays.forEach((day, dIdx) => {
-                    const dKey = `ledger-${day.date}`;
-                    const prevDay = sortedDays[dIdx + 1] || (dIdx === sortedDays.length - 1 ? prevPWeekSortedDays[0] : null);
-                    let dayVarHtml = "";
-                    if (prevDay) {
-                        const diff = day.total - prevDay.total;
-                        periodWeekDiffs.push(diff);
-                        allPeriodDiffs.push(diff);
-                        const vClass = diff > 0.00000001 ? "variance-up" : (diff < -0.00000001 ? "variance-down" : "variance-neutral");
-                        dayVarHtml = `<span class="${vClass}" style="font-size:9px; margin-right:5px; font-family:monospace; cursor:pointer;" onclick="event.stopPropagation(); toggleExact('${dKey}-v')">${diff > 0 ? '+' : ''}${formatLedger(diff, dKey+'-v')}</span>`;
-                    }
-                    html += `<div class="fiscal-row" style="padding-left:20px;"><span class="fiscal-label">${day.date}</span><span class="fiscal-val" style="cursor:pointer" onclick="toggleExact('${dKey}')">${dayVarHtml} +${formatLedger(day.total, dKey)} </span></div>`;
-                });
-                html += buildVarianceTally(periodWeekDiffs, `Yield Drift — Week ${w.wInP}`, [...w.entries].reverse());
-                html += `</div></div>`;
-            });
-            html += buildVarianceTally(allPeriodDiffs, 'Yield Drift — Period Total', p.weeks.flatMap(w => w.entries));
-            html += `</div></div>`;
-        });
+    const allPeriods = [];
+    const totalPeriods = Math.ceil(ledger.length / 28);
+    for (let p = 0; p < totalPeriods; p++) {
+        const pData = ledger.slice(p * 28, (p + 1) * 28);
+        allPeriods.push({ entries: pData, pNum: p + 1 });
     }
+    allPeriods.reverse();
+
+    const startDate = allPeriods[allPeriods.length - 1]?.entries[0]?.date || '';
+    const endDate = allPeriods[0]?.entries[allPeriods[0].entries.length - 1]?.date || '';
+    const currentPNum = allPeriods.length;
+    const totalPeriodNative = allPeriods.reduce((s, p) => s + p.entries.reduce((ss, d) => ss + d.native, 0), 0);
+    const totalPeriodLiquid = allPeriods.reduce((s, p) => s + p.entries.reduce((ss, d) => ss + d.liquid, 0), 0);
+    const totalPeriodTotal = totalPeriodNative + totalPeriodLiquid;
+    const avgPeriodDaily = totalPeriodTotal / (ledger.length || 1);
+
+
+    // Yield Drift Logic
+    const periodDiffs = [];
+    allPeriods.forEach((p) => {
+        const priorP = allPeriods.find(item => item.pNum === p.pNum - 1);
+        const pTotal = p.entries.reduce((s, d) => s + d.total, 0);
+        if (priorP && priorP.entries.length === 28 && p.entries.length === 28) {
+            const priorTotal = priorP.entries.reduce((s, d) => s + d.total, 0);
+            periodDiffs.push(pTotal - priorTotal);
+        }
+    });
+
+    const Pup = periodDiffs.filter(d => d > 0.00000001).reduce((s, d) => s + d, 0);
+    const dnP = periodDiffs.filter(d => d < -0.00000001).reduce((s, d) => s + d, 0);
+    const netP = Pup + dnP;
+
+    // Safety Check: Prevent crash if ledger is empty
+    const periodSummaries = allPeriods.map(p => ({
+        pNum: p.pNum,
+        total: p.entries.reduce((s, d) => s + d.total, 0)
+    }));
+    const Phi = periodSummaries.length > 0 ? periodSummaries.reduce((a, b) => a.total > b.total ? a : b) : null;
+    const Plo = periodSummaries.length > 0 ? periodSummaries.reduce((a, b) => a.total < b.total ? a : b) : null;
+    const avgP = allPeriods.length > 0 ? (totalPeriodTotal / allPeriods.length) : 0;
+
+    // 1. TOP HEADER
+     html += `
+    <div class="fiscal-header" style="display:flex; justify-content:space-between; align-items: baseline; margin-bottom: 10px;">
+        <span style="font-size:12px;">28-day</span>
+  <span style="font-size:10px; color:#666; font-weight:normal; text-align: center;">${startDate} – ${endDate}</span>
+        <span style="color:var(--main-color); font-weight:bold;">Period ${currentPNum}/13</span>
+    </div>`;
+
+    // 2. MAIN DATA LOOP
+    allPeriods.forEach((period, idx) => {
+        const pNative = period.entries.reduce((s, d) => s + d.native, 0);
+        const pLiquid = period.entries.reduce((s, d) => s + d.liquid, 0);
+        const pTotal = period.entries.reduce((s, d) => s + d.total, 0);
+        const prevPeriod = allPeriods.find(p => p.pNum === period.pNum - 1);
+        
+        let varHtml = '<span style="color:#444;">—</span>';
+        if (prevPeriod && prevPeriod.entries.length === 28 && period.entries.length === 28) {
+            const diff = pTotal - prevPeriod.entries.reduce((s, d) => s + d.total, 0);
+            const vClass = diff > 0.00000001 ? 'variance-up' : (diff < -0.00000001 ? 'variance-down' : 'variance-neutral');
+            varHtml = `<span class="${vClass}" style="cursor:pointer;" onclick="event.stopPropagation(); toggleExact('p-var-${period.pNum}-v')">
+                ${diff > 0 ? '+' : ''}${formatLedger(diff, `p-var-${period.pNum}-v`)}
+            </span>`;
+        }
+
+
+       const pStart = period.entries[0].date.slice(5);
+        const pEnd = period.entries[period.entries.length - 1].date.slice(5);
+
+        html += `
+        <div class="fiscal-row-container" style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333;">
+            <!-- Row 1: Context (Label, Dates, and Variance) - Triple Bucket Fix -->
+            <div style="display:flex; align-items:center; margin-bottom: 4px;">
+                
+                <!-- Left Bucket -->
+                <div style="flex:1; text-align:left;">
+                    <span style="font-size:10px; font-weight:bold; color:var(--main-color);">PERIOD ${period.pNum}</span>
+                    <span style="color:#666; font-weight:normal; font-size:9px;"> (${period.entries.length} days)</span>
+                </div>
+
+                <!-- Center Bucket (Date Range) -->
+                <div style="flex:1; text-align:center;">
+                    <span style="color:#666; font-weight:normal; font-size:10px; font-family:monospace;">${pStart} — ${pEnd}</span>
+                </div>
+
+                <!-- Right Bucket (Variance) -->
+                <div style="flex:1; text-align:right;">
+                    <span style="font-size:10px; font-family:monospace;">${varHtml}</span>
+                </div>
+
+            </div>
+
+            
+            <!-- Row 2: Values (The 3-Column Sweet Spot) -->
+            <div style="display:flex; font-family:monospace; font-size:11px;">
+                <div style="flex:1; text-align:left;">
+                    <div style="font-size:8px; color:#555; text-transform:uppercase;">Native</div>
+                    <div style="color:#ccc; cursor:pointer;" onclick="toggleExact('rev-p-${period.pNum}-n')">${formatLedger(pNative, `rev-p-${period.pNum}-n`)}</div>
+                </div>
+                <div style="flex:1; text-align:center;">
+                    <div style="font-size:8px; color:#555; text-transform:uppercase;">Liquid</div>
+                    <div style="color:#ccc; cursor:pointer;" onclick="toggleExact('rev-p-${period.pNum}-l')">${formatLedger(pLiquid, `rev-p-${period.pNum}-l`)}</div>
+                </div>
+                <div style="flex:1; text-align:right;">
+                    <div style="font-size:8px; color:#555; text-transform:uppercase;">Total</div>
+                    <div style="color:#fff; font-weight:bold; cursor:pointer;" onclick="toggleExact('p-var-${period.pNum}')">+${formatLedger(pTotal, `p-var-${period.pNum}`)}</div>
+                </div>
+            </div>
+        </div>`;
+    });
+
+    // 3.  PERIOD TOTALS (Using the same 3-column split)
+    html += `
+    <div style="background:#1a1a1a; padding:10px; border-radius:4px; border-top:2px solid var(--main-color);">
+        <div style="font-size:9px; color:#fff; text-transform:uppercase; margin-bottom:6px; letter-spacing:1px; text-weight: bold; text-align: center;">GRAND TOTAL</div>
+        <div style="display:flex; font-family:monospace; font-size:11px;">
+            <div style="flex:1; text-align:left;">
+                <span style="color:#ccc; cursor:pointer;" onclick="toggleExact('p-tot-n')">${formatLedger(totalPeriodNative, 'p-tot-n')}</span>
+            </div>
+            <div style="flex:1; text-align:center;">
+                <span style="color:#ccc; cursor:pointer;" onclick="toggleExact('p-tot-l')">${formatLedger(totalPeriodLiquid, 'p-tot-l')}</span>
+            </div>
+            <div style="flex:1; text-align:right;">
+                <span style="color:var(--success); font-weight:bold; cursor:pointer;" onclick="toggleExact('p-tot-t')">${formatLedger(totalPeriodTotal, 'p-tot-t')} ℏ</span>
+            </div>
+        </div>
+    </div>`;
+
+    // 4. YIELD DRIFT & PERFORMANCE (3-Column Layout)
+
+
+    html += `
+    <div class="fiscal-header" style="font-size:9px; border-bottom:1px solid #333; margin-top:20px; text-align: center;">PERIOD by PERIOD YIELD DRIFT TOTAL</div>
+    <div style="display:flex; font-size:9px; color:#555; text-transform:uppercase; padding:4px 0; border-bottom:1px dashed #333;">
+        <span style="flex:1; text-align:center;">UP</span>
+        <span style="flex:1; text-align:center;">DOWN</span>
+        <span style="flex:1; text-align:center;">NET</span>
+    </div>
+    <div style="display:flex; padding:8px 0; font-family:monospace; font-size:11px; border-bottom:1px solid #333;">
+        <span style="flex:1; text-align:center; color:var(--success); cursor:pointer;" onclick="toggleExact('p-up')">+${formatLedger(Pup, 'p-up')}</span>
+        <span style="flex:1; text-align:center; color:var(--danger); cursor:pointer;" onclick="toggleExact('p-dn')">-${formatLedger(dnP, 'p-dn')}</span>
+        <span style="flex:1; text-align:center; color:${netP >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:bold; cursor:pointer;" onclick="toggleExact('p-net')">
+            ${netP >= 0 ? '+' : ''}${formatLedger(netP, 'p-net')} ℏ
+        </span>
+    </div>
+
+    <div style="display:flex; font-size:9px; color:#555; text-transform:uppercase; padding:4px 0; border-bottom:1px dashed #333; margin-top:10px;">
+        <span style="flex:1; text-align:center;">High</span>
+        <span style="flex:1; text-align:center;">Low</span>
+        <span style="flex:1; text-align:center;">Avg/Period</span>
+    </div>
+    <div style="display:flex; padding:8px 0; font-size:11px; font-family:monospace;">
+        <div style="flex:1; text-align:center; display:flex; flex-direction:column;">
+            <span style="color:#ccc; cursor:pointer;" onclick="toggleExact('p-high')">+${formatLedger(Phi?.total || 0, 'p-high')}</span>
+            <span style="font-size:8px; color:#555;">PERIOD ${Phi?.pNum || '—'}</span>
+        </div>
+        <div style="flex:1; text-align:center; display:flex; flex-direction:column;">
+            <span style="color:#ccc; cursor:pointer;" onclick="toggleExact('p-low')">+${formatLedger(Plo?.total || 0, 'p-low')}</span>
+            <span style="font-size:8px; color:#555;">PERIOD ${Plo?.pNum || '—'}</span>
+        </div>
+        <span style="flex:1; text-align:center; color:#ccc; cursor:pointer; align-self:center;" onclick="toggleExact('p-avg')">
+            +${formatLedger(avgP, 'p-avg')} ℏ
+        </span>
+    </div>`;
+}
+
     else if (view === 'year') {
         const nRev = ledger.reduce((sum, d) => sum + d.native, 0);
         const lRev = ledger.reduce((sum, d) => sum + d.liquid, 0);
