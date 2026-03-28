@@ -1,4 +1,4 @@
-<p style="font-size: 48px; font weight: bold;">WIP</p><br>
+<p style="font-size: 48; font-weight: bold;">WIP</p><br>
 <br>
 MyHbar.io | Hedera Staking Monitor
 RETAIL PAYS THE BILLS • ENTERPRISE CREATES STABILITY • INSTITUTIONAL GRADE
