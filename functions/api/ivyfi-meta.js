@@ -1,8 +1,6 @@
 // Cloudflare Pages Function
-// Location in repo: functions/api/ivyfi-meta.js
-//
-// Fetches HCS metadata for an IvyFi Stake Receipt NFT and decompresses zstd.
-// Uses fzstd (pure JS zstd decoder, no WASM needed).
+// Repo location: functions/api/ivyfi-meta.js
+// Companion file: functions/package.json  (fzstd dependency)
 
 import { decompress } from 'fzstd';
 
@@ -41,7 +39,6 @@ export async function onRequest(context) {
             compressed[i] = binaryStr.charCodeAt(i);
         }
 
-        // fzstd decompress (pure JS, works in Workers runtime)
         const decompressed = decompress(compressed);
         const jsonStr = new TextDecoder().decode(decompressed);
         const meta = JSON.parse(jsonStr);
