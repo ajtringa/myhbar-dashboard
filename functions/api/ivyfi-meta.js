@@ -20,17 +20,16 @@ var ZSTDDecoder = /*#__PURE__*/function () {
   var _proto = ZSTDDecoder.prototype;
   _proto.init = function init() {
     if (_init) return _init;
-    if (typeof fetch !== 'undefined') {
-      // Web.
-      _init = fetch('data:application/wasm;base64,' + wasm).then(function (response) {
-        return response.arrayBuffer();
-      }).then(function (arrayBuffer) {
-        return WebAssembly.instantiate(arrayBuffer, IMPORT_OBJECT);
-      }).then(this._init);
-    } else {
-      // Node.js.
-      _init = WebAssembly.instantiate(Buffer.from(wasm, 'base64'), IMPORT_OBJECT).then(this._init);
-    }
+    
+    // Cloudflare Pages/Worker environment fix:
+    // We convert the 'wasm' string (base64) directly to a buffer 
+    // because Cloudflare doesn't support fetching data: URIs for Wasm.
+    const wasmBytes = Uint8Array.from(atob(wasm), c => c.charCodeAt(0));
+
+    _init = WebAssembly.instantiate(wasmBytes, IMPORT_OBJECT).then((result) => {
+      this._init(result);
+    });
+
     return _init;
   };
   _proto._init = function _init(result) {
