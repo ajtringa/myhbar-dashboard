@@ -1,0 +1,8 @@
+{
+  "name": "myhbar-api",
+  "version": "1.0.0",
+  "description": "Hedera Hashinal API",
+  "dependencies": {
+    "fzstd": "^0.1.1"
+  }
+}
