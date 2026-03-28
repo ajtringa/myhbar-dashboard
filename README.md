@@ -1,4 +1,4 @@
-*******WIP******
+*******WIP******<br>
 MyHbar.io | Hedera Staking Monitor
 RETAIL PAYS THE BILLS • ENTERPRISE CREATES STABILITY • INSTITUTIONAL GRADE
 
