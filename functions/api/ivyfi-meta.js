@@ -1,15 +1,11 @@
 // functions/api/ivyfi-meta.js
-
-// 1. Import the pure JavaScript decompressor we told Cloudflare to download
 import { decompress } from 'fzstd';
 
 export async function onRequest(context) {
-    // 2. Grab the topic and serial from the URL (e.g., ?topic=0.0.x&serial=y)
     const url = new URL(context.request.url);
     const topic = url.searchParams.get('topic');
     const serial = url.searchParams.get('serial');
 
-    // Setup headers so your website can read the response
     const headers = {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json',
@@ -21,17 +17,23 @@ export async function onRequest(context) {
     }
 
     try {
-        // 3. Fetch the specific message from the Hedera Mirror Node
-        const hcsRes = await fetch(
-            `https://mainnet-public.mirrornode.hedera.com/api/v1/topics/${topic}/messages?limit=1&reqType=consensus&reqSerialNum=${serial}`
-        );
+        // FIXED URL: The correct Hedera query parameter is "sequencenumber"
+        const mirrorNodeUrl = `https://mainnet-public.mirrornode.hedera.com/api/v1/topics/${topic}/messages?sequencenumber=${serial}`;
+        
+        const hcsRes = await fetch(mirrorNodeUrl);
+        
+        // Added error checking to immediately catch Mirror Node URL issues
+        if (!hcsRes.ok) {
+            return new Response(JSON.stringify({ error: `Mirror node rejected request: ${hcsRes.status}` }), { status: 500, headers });
+        }
+
         const hcsData = await hcsRes.json();
         
         if (!hcsData.messages || hcsData.messages.length === 0) {
-            return new Response(JSON.stringify({ error: 'No HCS messages found' }), { status: 404, headers });
+            return new Response(JSON.stringify({ error: `No HCS message found for serial ${serial}` }), { status: 404, headers });
         }
 
-        // 4. Decode the base64 message from Hedera
+        // Decode the base64 message from Hedera
         const outer = JSON.parse(atob(hcsData.messages[0].message));
         
         // Hashinals keep data in the "c" property (compressed data URI)
@@ -45,14 +47,13 @@ export async function onRequest(context) {
             compressed[i] = binaryStr.charCodeAt(i);
         }
 
-        // 5. Decompress it using our pure JavaScript tool! (NO WASM ERRORS)
+        // Decompress using fzstd
         const decompressed = decompress(compressed);
         
-        // 6. Convert the decompressed binary back into readable text (JSON)
+        // Convert the decompressed binary back into readable text (JSON)
         const jsonStr = new TextDecoder().decode(decompressed);
         const meta = JSON.parse(jsonStr);
 
-        // Send the final JSON metadata back to your website
         return new Response(JSON.stringify(meta), { status: 200, headers });
 
     } catch (e) {
