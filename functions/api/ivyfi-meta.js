@@ -17,26 +17,26 @@ export async function onRequest(context) {
     }
 
     try {
-        // FIXED URL: The correct Hedera query parameter is "sequencenumber"
-        const mirrorNodeUrl = `https://mainnet-public.mirrornode.hedera.com/api/v1/topics/${topic}/messages?sequencenumber=${serial}`;
+        // REVERTED: Back to your exact original logic! 
+        // Just grabbing the newest message on the topic instead of looking for message #53
+        const mirrorNodeUrl = `https://mainnet-public.mirrornode.hedera.com/api/v1/topics/${topic}/messages?limit=1`;
         
         const hcsRes = await fetch(mirrorNodeUrl);
         
-        // Added error checking to immediately catch Mirror Node URL issues
         if (!hcsRes.ok) {
-            return new Response(JSON.stringify({ error: `Mirror node rejected request: ${hcsRes.status}` }), { status: 500, headers });
+            return new Response(JSON.stringify({ error: `Mirror node error: ${hcsRes.status}` }), { status: 500, headers });
         }
 
         const hcsData = await hcsRes.json();
         
         if (!hcsData.messages || hcsData.messages.length === 0) {
-            return new Response(JSON.stringify({ error: `No HCS message found for serial ${serial}` }), { status: 404, headers });
+            return new Response(JSON.stringify({ error: `No HCS messages found for topic ${topic}` }), { status: 404, headers });
         }
 
         // Decode the base64 message from Hedera
         const outer = JSON.parse(atob(hcsData.messages[0].message));
         
-        // Hashinals keep data in the "c" property (compressed data URI)
+        // Extract the compressed data URI
         const dataUri = outer.c || '';
         const b64 = dataUri.includes(',') ? dataUri.split(',')[1] : dataUri;
 
@@ -47,7 +47,7 @@ export async function onRequest(context) {
             compressed[i] = binaryStr.charCodeAt(i);
         }
 
-        // Decompress using fzstd
+        // Decompress using the pure JS tool (No WASM errors!)
         const decompressed = decompress(compressed);
         
         // Convert the decompressed binary back into readable text (JSON)
