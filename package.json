@@ -1,7 +1,0 @@
-{
-  "name": "myhbar-dashboard",
-  "version": "1.0.0",
-  "dependencies": {
-    "fzstd": "^0.1.1"
-  }
-}
