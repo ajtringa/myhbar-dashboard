@@ -1,7 +1,7 @@
 export async function onRequestGet() {
   const statusUrl = 'https://status.' + 'hedera' + '.com/api/v2/summary.json';
   const blogUrl = 'https://' + 'hedera' + '.com/blog/feed';
-  const hbarFdnUrl = 'https://hbarfoundation.' + 'org/blog/rss.xml';
+  const gNewsUrl = 'https://news.' + 'google' + '.com/rss/search?q=Hedera+HBAR+when:7d&hl=en-US&gl=US&ceid=US:en';
 
   const stripHtml = (s) => (s || '')
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
@@ -18,23 +18,23 @@ export async function onRequestGet() {
   const items = [];
   const feeds = [
     { source: 'Hedera Official', tag: 'NETWORK', url: blogUrl },
-    { source: 'HBAR Foundation', tag: 'ECOSYSTEM', url: hbarFdnUrl }
+    { source: 'Hedera Ecosystem', tag: 'NEWS', url: gNewsUrl }
   ];
 
   await Promise.all(feeds.map(async (f) => {
     try {
-      const res = await fetch(f.url, { headers: { 'User-Agent': 'MyHbar.io-News/1.0', 'Accept': 'application/rss+xml, application/xml, text/xml' } });
+      const res = await fetch(f.url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MyHbarBot/1.0)', 'Accept': '*/*' } });
       if (!res.ok) return;
       const xml = await res.text();
-      const blocks = xml.split('<item>').slice(1, 12);
+      const blocks = xml.includes('<item>') ? xml.split('<item>').slice(1, 15) : xml.split('<entry>').slice(1, 15);
       for (const b of blocks) {
-        const titleMatch = b.match(/<title>([\s\S]*?)<\/title>/);
-        const linkMatch = b.match(/<link>([\s\S]*?)<\/link>/);
-        const dateMatch = b.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
+        const titleMatch = b.match(/<title[^>]*>([\s\S]*?)<\/title>/);
+        const linkMatch = b.match(/<link[^>]*href=["']([^"']+)["']/) || b.match(/<link>([\s\S]*?)<\/link>/);
+        const dateMatch = b.match(/<pubDate>([\s\S]*?)<\/pubDate>/) || b.match(/<updated>([\s\S]*?)<\/updated>/);
         const title = stripHtml(titleMatch ? titleMatch.at(1) : '');
         const link = stripHtml(linkMatch ? linkMatch.at(1) : '');
         const pubDate = stripHtml(dateMatch ? dateMatch.at(1) : '');
-        if (!title || 25 > title.length) continue;
+        if (!title || 20 > title.length) continue;
         items.push({
           source: f.source,
           tag: f.tag,
@@ -53,7 +53,7 @@ export async function onRequestGet() {
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'public, max-age=300'
+      'Cache-Control': 'no-store'
     }
   });
 }
