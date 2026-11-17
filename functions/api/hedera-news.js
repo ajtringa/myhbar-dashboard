@@ -18,6 +18,7 @@ export async function onRequestGet() {
 
   const items = [];
   const seenTitles = new Set();
+  const minTs = Date.now() - (180 * 86400 * 1000);
   const feeds = [
     { source: 'Hedera Official', tag: 'NETWORK', url: blogUrl },
     { source: 'CoinTelegraph', tag: 'CATALYST', url: ctUrl },
@@ -45,6 +46,9 @@ export async function onRequestGet() {
         if (!title || 25 > title.length || lower.includes('price prediction') || lower.includes('will hbar')) continue;
         if (f.tag === 'CATALYST' && !catalystWords.some(w => lower.includes(w))) continue;
 
+        const ts = pubDate ? Date.parse(pubDate) || Date.now() : Date.now();
+        if (minTs > ts) continue;
+
         const key = lower.slice(0, 42);
         if (seenTitles.has(key)) continue;
         seenTitles.add(key);
@@ -54,7 +58,7 @@ export async function onRequestGet() {
           tag: f.tag,
           title: title.length > 180 ? title.slice(0, 177) + '...' : title,
           link,
-          ts: pubDate ? Date.parse(pubDate) || Date.now() : Date.now()
+          ts
         });
       }
     } catch (e) {}
