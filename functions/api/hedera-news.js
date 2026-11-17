@@ -30,7 +30,7 @@ export async function onRequestGet() {
     'breakout', 'listing', 'sec', 'canary', 'grayscale', 'partnership', 'council',
     'billion', 'treasury', 'stablecoin', 'mainnet', 'upgrade', 'tokenization',
     'integration', 'launch', 'enterprise', 'defi', 'hedera foundation', 'hedera', 'SaucerSwap', 'Bonzo Finance', 'DEX',
-    'Hbar Bull','Hbar'
+    'Hbar Bull','Hbar', 'exchanges', 'exchange', 'token', 'retail', 'rwa', 'hashpack'
   ];
 
   await Promise.all(feeds.map(async (f) => {
