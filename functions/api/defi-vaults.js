@@ -1,6 +1,7 @@
 export async function onRequestGet() {
+  const targetUrl = 'https://mainnet-single-asset.' + 'bonzo' + '.finance/v1/api/vaults';
   try {
-    const res = await fetch('https://bonzo.finance', {
+    const res = await fetch(targetUrl, {
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'MyHbar.io-Dashboard/1.0'
@@ -22,4 +23,3 @@ export async function onRequestGet() {
     });
   }
 }
-
