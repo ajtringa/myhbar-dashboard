@@ -3,6 +3,7 @@ export async function onRequestGet() {
   const blogUrl = 'https://' + 'hedera' + '.com/blog/feed';
   const ctUrl = 'https://cointelegraph.' + 'com/rss/tag/hedera';
   const gNewsUrl = 'https://news.' + 'google' + '.com/rss/search?q=Hedera+HBAR&hl=en-US&gl=US&ceid=US:en';
+  const xUrl = 'https://news.' + 'google' + '.com/rss/search?q=site:://x.com';
 
   const stripHtml = (s) => (s || '')
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
@@ -21,6 +22,7 @@ export async function onRequestGet() {
   const minTs = Date.now() - (180 * 86400 * 1000);
   const feeds = [
     { source: 'Hedera Official', tag: 'NETWORK', url: blogUrl },
+    { source: '@hedera / X', tag: 'X POST', url: xUrl },
     { source: 'CoinTelegraph', tag: 'CATALYST', url: ctUrl },
     { source: 'Market Catalyst', tag: 'CATALYST', url: gNewsUrl }
   ];
@@ -41,9 +43,9 @@ export async function onRequestGet() {
         const link = stripHtml(linkMatch ? linkMatch.at(1) : '');
         const pubDate = stripHtml(dateMatch ? dateMatch.at(1) : '');
 
-        if (f.tag === 'CATALYST') title = title.replace(/\s+-\s+[^-]+$/, '').trim();
+        if (f.tag !== 'NETWORK') title = title.replace(/\s+-\s+[^-]+$/, '').trim();
         const lower = title.toLowerCase();
-        if (!title || 25 > title.length || lower.includes('price prediction') || lower.includes('will hbar')) continue;
+        if (!title || 25 > title.length || title.startsWith('@') || title.startsWith('RT @') || lower.includes('price prediction') || lower.includes('will hbar')) continue;
         if (f.tag === 'CATALYST' && !catalystWords.some(w => lower.includes(w))) continue;
 
         const ts = pubDate ? Date.parse(pubDate) || Date.now() : Date.now();
@@ -66,7 +68,7 @@ export async function onRequestGet() {
 
   items.sort((a, b) => b.ts - a.ts);
 
-  return new Response(JSON.stringify({ status: statusSummary, items: items.slice(0, 20) }), {
+  return new Response(JSON.stringify({ status: statusSummary, items: items.slice(0, 25) }), {
     status: 200,
     headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' }
   });
