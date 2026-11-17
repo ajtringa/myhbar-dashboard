@@ -2,24 +2,29 @@ export async function onRequestGet(context) {
   const url = new URL(context.request.url);
   const userAddr = url.searchParams.get('user') || '';
   const headers = {
-    'Accept': 'application/json',
-    'User-Agent': 'MyHbar.io-Dashboard/1.0'
+    'Accept': 'application/json, text/plain, */*',
+    'Origin': 'https://bonzo.finance',
+    'Referer': 'https://bonzo.finance/'
   };
 
   try {
     const vaultsRes = await fetch('https://bonzo.finance', { headers });
     const vaultsText = await vaultsRes.text();
     let vaultsData = {};
-    try { vaultsData = JSON.parse(vaultsText); } catch (e) { vaultsData = { raw: vaultsText }; }
+    try { vaultsData = JSON.parse(vaultsText); } catch (e) { vaultsData = { vaults: [] }; }
 
     let userData = null;
     if (userAddr) {
-      try {
-        const userRes = await fetch(`https://bonzo.finance{encodeURIComponent(userAddr)}`, { headers });
-        if (userRes.ok) {
-          userData = await userRes.json();
-        }
-      } catch (e) {}
+      for (const path of [`/v1/api/users/${userAddr}`, `/v1/api/users/${userAddr}/positions`]) {
+        try {
+          const uRes = await fetch(`https://bonzo.finance${path}`, { headers });
+          if (uRes.ok) {
+            const txt = await uRes.text();
+            userData = JSON.parse(txt);
+            break;
+          }
+        } catch (e) {}
+      }
     }
 
     const payload = Array.isArray(vaultsData)
@@ -35,7 +40,7 @@ export async function onRequestGet(context) {
       }
     });
   } catch (err) {
-    return new Response(JSON.stringify({ vaults: [], user: null, error: String(err) }), {
+    return new Response(JSON.stringify({ vaults: [], user: null }), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
@@ -44,3 +49,4 @@ export async function onRequestGet(context) {
     });
   }
 }
+
