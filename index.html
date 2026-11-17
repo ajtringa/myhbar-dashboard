@@ -5912,9 +5912,6 @@ function handleAccountingSync() {
    
  function resetColor() { localStorage.removeItem('myhbar_theme'); const randomColor = colors[Math.floor(Math.random() * colors.length)]; document.documentElement.style.setProperty('--main-color', randomColor); alert("Color Randomizer Restored!"); }
 
-function copyAddress() { navigator.clipboard.writeText("0.0.8889863"); const msg = document.getElementById('copyMsg'); msg.innerText = "Address Copied! Thank You! Ħ"; msg.style.opacity = 1; setTimeout(() => { msg.style.opacity = 0; setTimeout(() => msg.innerText = "Address Copied!", 500); }, 2000); }
-
-  document.getElementById('screensaver').addEventListener('touchstart', e => e.stopPropagation(), { passive: false });
     document.querySelectorAll('.modal-overlay, .lock-alert-overlay').forEach(overlay => {
         overlay.addEventListener('touchmove', e => {
             if (e.target === overlay) e.preventDefault();
