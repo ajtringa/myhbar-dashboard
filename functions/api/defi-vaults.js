@@ -1,14 +1,14 @@
-export async function onRequestGet(context) {
-  const headers = {
-    'Accept': 'application/json',
-    'User-Agent': 'MyHbar.io-Dashboard/1.0'
-  };
-
+export async function onRequestGet() {
   try {
-    const vaultsRes = await fetch('https://bonzo.finance', { headers });
-    const body = await vaultsRes.text();
+    const res = await fetch('https://bonzo.finance', {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'MyHbar.io-Dashboard/1.0'
+      }
+    });
+    const body = await res.text();
     return new Response(body, {
-      status: vaultsRes.status,
+      status: 200,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
