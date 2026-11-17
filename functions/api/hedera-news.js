@@ -29,7 +29,8 @@ export async function onRequestGet() {
     'etf', 'blackrock', 'coinbase', 'institutional', 'surge', 'rally', 'soar',
     'breakout', 'listing', 'sec', 'canary', 'grayscale', 'partnership', 'council',
     'billion', 'treasury', 'stablecoin', 'mainnet', 'upgrade', 'tokenization',
-    'integration', 'launch', 'enterprise', 'defi', 'hedera foundation', 'hedera', 'SaucerSwap', 'Bonzo Finance'
+    'integration', 'launch', 'enterprise', 'defi', 'hedera foundation', 'hedera', 'SaucerSwap', 'Bonzo Finance', 'DEX',
+    'Hbar Bull','Hbar'
   ];
 
   await Promise.all(feeds.map(async (f) => {
