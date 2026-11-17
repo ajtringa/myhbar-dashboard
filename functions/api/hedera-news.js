@@ -1,7 +1,8 @@
 export async function onRequestGet() {
   const statusUrl = 'https://status.' + 'hedera' + '.com/api/v2/summary.json';
   const blogUrl = 'https://' + 'hedera' + '.com/blog/feed';
-  const gNewsUrl = 'https://news.' + 'google' + '.com/rss/search?q=Hedera+HBAR+when:7d&hl=en-US&gl=US&ceid=US:en';
+  const catalystQuery = encodeURIComponent('"Hedera" ("HBAR" OR "ETF" OR "BlackRock" OR "Coinbase" OR "institutional" OR "surge") -prediction -"price prediction" when:14d');
+  const catalystUrl = 'https://news.' + 'google' + '.com/rss/search?q=' + catalystQuery + '&hl=en-US&gl=US&ceid=US:en';
 
   const stripHtml = (s) => (s || '')
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
@@ -16,9 +17,10 @@ export async function onRequestGet() {
   } catch (e) {}
 
   const items = [];
+  const seenTitles = new Set();
   const feeds = [
     { source: 'Hedera Official', tag: 'NETWORK', url: blogUrl },
-    { source: 'Hedera Ecosystem', tag: 'NEWS', url: gNewsUrl }
+    { source: 'Market Catalyst', tag: 'CATALYST', url: catalystUrl }
   ];
 
   await Promise.all(feeds.map(async (f) => {
@@ -26,15 +28,23 @@ export async function onRequestGet() {
       const res = await fetch(f.url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MyHbarBot/1.0)', 'Accept': '*/*' } });
       if (!res.ok) return;
       const xml = await res.text();
-      const blocks = xml.includes('<item>') ? xml.split('<item>').slice(1, 15) : xml.split('<entry>').slice(1, 15);
+      const blocks = xml.includes('<item>') ? xml.split('<item>').slice(1, 12) : xml.split('<entry>').slice(1, 12);
       for (const b of blocks) {
         const titleMatch = b.match(/<title[^>]*>([\s\S]*?)<\/title>/);
         const linkMatch = b.match(/<link[^>]*href=["']([^"']+)["']/) || b.match(/<link>([\s\S]*?)<\/link>/);
         const dateMatch = b.match(/<pubDate>([\s\S]*?)<\/pubDate>/) || b.match(/<updated>([\s\S]*?)<\/updated>/);
-        const title = stripHtml(titleMatch ? titleMatch.at(1) : '');
+        let title = stripHtml(titleMatch ? titleMatch.at(1) : '');
         const link = stripHtml(linkMatch ? linkMatch.at(1) : '');
         const pubDate = stripHtml(dateMatch ? dateMatch.at(1) : '');
-        if (!title || 20 > title.length) continue;
+
+        if (f.tag === 'CATALYST') title = title.replace(/\s+-\s+[^-]+$/, '').trim();
+        const lower = title.toLowerCase();
+        if (!title || 25 > title.length || lower.includes('price prediction') || lower.includes('will hbar')) continue;
+
+        const key = lower.slice(0, 45);
+        if (seenTitles.has(key)) continue;
+        seenTitles.add(key);
+
         items.push({
           source: f.source,
           tag: f.tag,
