@@ -1,8 +1,8 @@
 export async function onRequestGet() {
   const statusUrl = 'https://status.' + 'hedera' + '.com/api/v2/summary.json';
   const blogUrl = 'https://' + 'hedera' + '.com/blog/feed';
-  const catalystQuery = encodeURIComponent('"Hedera" ("HBAR" OR "ETF" OR "BlackRock" OR "Coinbase" OR "institutional" OR "surge") -prediction -"price prediction" when:14d');
-  const catalystUrl = 'https://news.' + 'google' + '.com/rss/search?q=' + catalystQuery + '&hl=en-US&gl=US&ceid=US:en';
+  const ctUrl = 'https://cointelegraph.' + 'com/rss/tag/hedera';
+  const gNewsUrl = 'https://news.' + 'google' + '.com/rss/search?q=Hedera+HBAR&hl=en-US&gl=US&ceid=US:en';
 
   const stripHtml = (s) => (s || '')
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
@@ -20,15 +20,18 @@ export async function onRequestGet() {
   const seenTitles = new Set();
   const feeds = [
     { source: 'Hedera Official', tag: 'NETWORK', url: blogUrl },
-    { source: 'Market Catalyst', tag: 'CATALYST', url: catalystUrl }
+    { source: 'CoinTelegraph', tag: 'CATALYST', url: ctUrl },
+    { source: 'Market Catalyst', tag: 'CATALYST', url: gNewsUrl }
   ];
+
+  const catalystWords = ['etf', 'blackrock', 'coinbase', 'institutional', 'surge', 'rally', 'soar', 'breakout', 'listing', 'sec', 'canary', 'grayscale', 'partnership', 'council', 'billion', 'treasury', 'stablecoin'];
 
   await Promise.all(feeds.map(async (f) => {
     try {
       const res = await fetch(f.url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MyHbarBot/1.0)', 'Accept': '*/*' } });
       if (!res.ok) return;
       const xml = await res.text();
-      const blocks = xml.includes('<item>') ? xml.split('<item>').slice(1, 12) : xml.split('<entry>').slice(1, 12);
+      const blocks = xml.includes('<item>') ? xml.split('<item>').slice(1, 15) : xml.split('<entry>').slice(1, 15);
       for (const b of blocks) {
         const titleMatch = b.match(/<title[^>]*>([\s\S]*?)<\/title>/);
         const linkMatch = b.match(/<link[^>]*href=["']([^"']+)["']/) || b.match(/<link>([\s\S]*?)<\/link>/);
@@ -40,8 +43,9 @@ export async function onRequestGet() {
         if (f.tag === 'CATALYST') title = title.replace(/\s+-\s+[^-]+$/, '').trim();
         const lower = title.toLowerCase();
         if (!title || 25 > title.length || lower.includes('price prediction') || lower.includes('will hbar')) continue;
+        if (f.tag === 'CATALYST' && !catalystWords.some(w => lower.includes(w))) continue;
 
-        const key = lower.slice(0, 45);
+        const key = lower.slice(0, 42);
         if (seenTitles.has(key)) continue;
         seenTitles.add(key);
 
@@ -60,10 +64,6 @@ export async function onRequestGet() {
 
   return new Response(JSON.stringify({ status: statusSummary, items: items.slice(0, 20) }), {
     status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'no-store'
-    }
+    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' }
   });
 }
