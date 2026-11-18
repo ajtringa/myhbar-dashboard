@@ -56,6 +56,9 @@ export async function onRequestPost(context) {
   }
 
   await kv.put('dashboard_state', JSON.stringify(existing));
+    if (body.prefs && typeof body.prefs === 'object') {
+    existing.prefs = { ...(existing.prefs || {}), ...body.prefs };
+  }
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' }
