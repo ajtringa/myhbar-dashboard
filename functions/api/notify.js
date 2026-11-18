@@ -1,7 +1,7 @@
 export async function onRequestPost(context) {
   try {
     const body = await context.request.json();
-    const topic = (body.topic || 'myhbar_0_0_0').trim();
+    const topic = (body.topic || 'myhbar_alerts_0_0_0').trim();
     const title = (body.title || 'MyHbar.io Alert').trim();
     const message = (body.detail || '').trim();
     const priority = body.type === 'out' ? 4 : 3;
