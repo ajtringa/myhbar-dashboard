@@ -1,28 +1,35 @@
 export async function onRequestPost(context) {
   try {
     const body = await context.request.json();
-    const topic = (body.topic || 'myhbar_alerts_0_0_0').trim();
+    const topic = (body.topic || 'myhbar_0_0_0').trim();
     const title = (body.title || 'MyHbar.io Alert').trim();
     const message = (body.detail || '').trim();
-    const priority = body.type === 'out' ? '4' : '3';
-    const tags = body.type === 'in' ? 'moneybag,chart_with_upwards_trend' : body.type === 'out' ? 'warning' : 'bell';
+    const priority = body.type === 'out' ? 4 : 3;
+    const tags = body.type === 'in'
+      ? ['moneybag', 'chart_with_upwards_trend']
+      : body.type === 'out'
+      ? ['warning']
+      : ['bell'];
 
     if (!message) {
-      return new Response(JSON.stringify({ ok: false }), { status: 400 });
+      return new Response(JSON.stringify({ ok: false, reason: 'empty_message' }), { status: 400 });
     }
 
-    const ntfyUrl = 'https://' + 'ntfy' + '.sh/' + encodeURIComponent(topic);
-    const res = await fetch(ntfyUrl, {
+    const ntfyEndpoint = 'https://' + 'ntfy' + '.sh/';
+    const res = await fetch(ntfyEndpoint, {
       method: 'POST',
-      headers: {
-        'Title': title,
-        'Priority': priority,
-        'Tags': tags
-      },
-      body: message
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic,
+        title,
+        message,
+        priority,
+        tags
+      })
     });
 
-    return new Response(JSON.stringify({ ok: res.ok }), {
+    const respText = await res.text();
+    return new Response(JSON.stringify({ ok: res.ok, status: res.status, respText }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
